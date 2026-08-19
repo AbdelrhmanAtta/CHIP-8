@@ -6,6 +6,25 @@ const REGISTERS_NUMBER: usize = 16;
 const STACK_SIZE: usize = 16;
 const KEYS_NUMBER: usize = 16;
 const START_ADDR: u16 = 0x200;
+const FONTSET_SIZE: usize = 80;
+const FONTSET: [u8; FONTSET_SIZE] = [
+    0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
+    0x20, 0x60, 0x20, 0x20, 0x70, // 1
+    0xF0, 0x10, 0xF0, 0x80, 0xF0, // 2
+    0xF0, 0x10, 0xF0, 0x10, 0xF0, // 3
+    0x90, 0x90, 0xF0, 0x10, 0x10, // 4
+    0xF0, 0x80, 0xF0, 0x10, 0xF0, // 5
+    0xF0, 0x80, 0xF0, 0x90, 0xF0, // 6
+    0xF0, 0x10, 0x20, 0x40, 0x40, // 7
+    0xF0, 0x90, 0xF0, 0x90, 0xF0, // 8
+    0xF0, 0x90, 0xF0, 0x10, 0xF0, // 9
+    0xF0, 0x90, 0xF0, 0x90, 0x90, // A
+    0xE0, 0x90, 0xE0, 0x90, 0xE0, // B
+    0xF0, 0x80, 0x80, 0x80, 0xF0, // C
+    0xE0, 0x90, 0x90, 0x90, 0xE0, // D
+    0xF0, 0x80, 0xF0, 0x80, 0xF0, // E
+    0xF0, 0x80, 0xF0, 0x80, 0x80  // F
+];
 
 pub struct Emulator {
     pc: u16,
@@ -22,8 +41,7 @@ pub struct Emulator {
 
 impl Emulator {
     pub fn new() ->  Self {
-        Self
-        {
+        let mut new_emulator = Self {
             pc: START_ADDR,
             ram: [0; RAM_SIZE],
             screen: [false; SCREEN_WIDTH * SCREEN_HEIGHT],
@@ -34,6 +52,57 @@ impl Emulator {
             keys: [false; KEYS_NUMBER],
             delay_timer: 0,
             sound_timer: 0,
+        };
+        new_emulator.ram[..FONTSET_SIZE].copy_from_slice(&FONTSET);
+        new_emulator
+    }
+
+    pub fn tick(&mut self) {
+        let op = self.fetch();
+    }
+
+    pub fn tick_timer(&mut self) {
+        if self.delay_timer > 0 {
+            self.delay_timer -= 1;
+        }
+        if self.sound_timer > 0 {
+            if self.sound_timer == 1 {
+                // Will Add Beep Later
+            }
+            self.sound_timer -= 1;
         }
     }
+
+    fn push(&mut self, val: u16) {
+        self.stack[self.sp as usize] = val;
+        self.sp += 1;
+    }
+
+    fn pop(&mut self) -> u16 {
+        self.sp -= 1;
+        self.stack[self.sp as usize]
+    }
+
+    fn fetch(&mut self) -> u16 {
+        let high_byte = self.ram[self.pc as usize] as u16;
+        let low_byte = self.ram[(self.pc + 1) as usize] as u16;
+        let op = (high_byte << 8) | low_byte;
+        self.pc += 2;
+        op
+    }
+
+    pub fn reset(&mut self) {
+        self.pc = START_ADDR;
+        self.ram = [0; RAM_SIZE];
+        self.screen = [false; SCREEN_WIDTH * SCREEN_HEIGHT];
+        self.v_registers = [0; REGISTERS_NUMBER];
+        self.i_register = 0;
+        self.sp = 0;
+        self.stack = [0; STACK_SIZE];
+        self.keys = [false; KEYS_NUMBER];
+        self.delay_timer = 0;
+        self.sound_timer = 0;
+        self.ram[..FONTSET_SIZE].copy_from_slice(&FONTSET);
+    }
 }
+
