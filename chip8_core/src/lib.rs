@@ -413,4 +413,18 @@ impl Emulator {
         self.sound_timer = 0;
         self.ram[..FONTSET_SIZE].copy_from_slice(&FONTSET);
     }
+
+    pub fn get_display(&self) -> &[bool] {
+        &self.screen
+    }
+
+    pub fn keypress(&mut self, idx: usize, pressed: bool) {
+        self.keys[idx] = pressed;
+    }
+
+    pub fn load(&mut self, data: &[u8]) {
+        let start = START_ADDR as usize;
+        let end = (START_ADDR as usize) + data.len();
+        self.ram[start..end].copy_from_slice(data);
+    }
 }
