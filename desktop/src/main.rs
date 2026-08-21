@@ -1,3 +1,8 @@
+//! CHIP-8 SDL2 frontend and runner.
+//!
+//! Provides the window, canvas rendering, keyboard event pump, and main game loop
+//! interface for the `chip8_core` emulation engine.
+
 use chip8_core::*;
 
 use std::env;
@@ -11,11 +16,20 @@ use sdl2::rect::Rect;
 use sdl2::render::Canvas;
 use sdl2::video::Window;
 
+/// Upscaling factor applied to each native 1x1 CHIP-8 pixel on the SDL window.
 const SCALE: u32 = 15;
+
+/// Derived window width in physical display pixels.
 const WINDOW_WIDTH: u32 = (SCREEN_WIDTH as u32) * SCALE;
+
+/// Derived window height in physical display pixels.
 const WINDOW_HEIGHT: u32 = (SCREEN_HEIGHT as u32) * SCALE;
+
+/// Number of CPU instruction cycles executed per rendered frame (~600 Hz CPU clock).
 const TICKS_PER_FRAME: usize = 10;
 
+/// Application entry point. Initializes SDL2, loads the target ROM, and drives
+/// the main emulation cycle.
 fn main() {
     let args: Vec<_> = env::args().collect();
     if args.len() != 2 {
@@ -23,30 +37,30 @@ fn main() {
         return;
     }
 
-    // Setup SDL
-    let sdl_context = sdl2::init().unwrap();
-    let video_subsystem = sdl_context.video().unwrap();
+    // Initialize SDL2 context and window canvas
+    let sdl_context = sdl2::init().expect("Failed to initialize SDL2 context");
+    let video_subsystem = sdl_context.video().expect("Failed to initialize video subsystem");
     let window = video_subsystem
         .window("Chip-8 Emulator", WINDOW_WIDTH, WINDOW_HEIGHT)
         .position_centered()
         .opengl()
         .build()
-        .unwrap();
+        .expect("Failed to build SDL window");
 
-    let mut canvas = window.into_canvas().present_vsync().build().unwrap();
+    let mut canvas = window.into_canvas().present_vsync().build().expect("Failed to build canvas");
     canvas.clear();
     canvas.present();
 
-    let mut event_pump = sdl_context.event_pump().unwrap();
-
+    let mut event_pump = sdl_context.event_pump().expect("Failed to create event pump");
     let mut chip8 = Emulator::new();
 
-    let mut rom = File::open(&args[1]).expect("Unable to open file");
+    // Load ROM file into memory
+    let mut rom = File::open(&args[1]).expect("Unable to open ROM file");
     let mut buffer = Vec::new();
-
-    rom.read_to_end(&mut buffer).unwrap();
+    rom.read_to_end(&mut buffer).expect("Failed to read ROM file into buffer");
     chip8.load(&buffer);
 
+    // Primary emulation and rendering loop
     'gameloop: loop {
         for evt in event_pump.poll_iter() {
             match evt {
@@ -83,21 +97,25 @@ fn main() {
     }
 }
 
+/// Renders the emulator's 1D framebuffer onto the scaled SDL2 window canvas.
+///
+/// # Arguments
+/// * `emu` - Reference to the active emulator state.
+/// * `canvas` - Mutable reference to the SDL2 drawing canvas.
 fn draw_screen(emu: &Emulator, canvas: &mut Canvas<Window>) {
-    // Clear canvas as black
+    // Clear screen to black background
     canvas.set_draw_color(Color::RGB(0, 0, 0));
     canvas.clear();
 
+    // Draw active pixels as white scaled rectangles
     let screen_buf = emu.get_display();
-    // Now set draw color to white, iterate through each point and see if it should be drawn
     canvas.set_draw_color(Color::RGB(255, 255, 255));
+
     for (i, pixel) in screen_buf.iter().enumerate() {
         if *pixel {
-            // Convert our 1D array's index into a 2D (x,y) position
             let x = (i % SCREEN_WIDTH) as u32;
             let y = (i / SCREEN_WIDTH) as u32;
 
-            // Draw a rectangle at (x,y), scaled up by our SCALE value
             let rect = Rect::new((x * SCALE) as i32, (y * SCALE) as i32, SCALE, SCALE);
             canvas.fill_rect(rect).unwrap();
         }
@@ -105,19 +123,26 @@ fn draw_screen(emu: &Emulator, canvas: &mut Canvas<Window>) {
     canvas.present();
 }
 
-/*
-    Keyboard                    Chip-8
-    +---+---+---+---+           +---+---+---+---+
-    | 1 | 2 | 3 | 4 |           | 1 | 2 | 3 | C |
-    +---+---+---+---+           +---+---+---+---+
-    | Q | W | E | R |           | 4 | 5 | 6 | D |
-    +---+---+---+---+     =>    +---+---+---+---+
-    | A | S | D | F |           | 7 | 8 | 9 | E |
-    +---+---+---+---+           +---+---+---+---+
-    | Z | X | C | V |           | A | 0 | B | F |
-    +---+---+---+---+           +---+---+---+---+
-*/
-
+/// Maps standard QWERTY keyboard inputs to standard hexadecimal CHIP-8 keypad indices.
+///
+/// ```text
+/// Keyboard Layout              CHIP-8 Hex Keypad
+/// +---+---+---+---+            +---+---+---+---+
+/// | 1 | 2 | 3 | 4 |            | 1 | 2 | 3 | C |
+/// +---+---+---+---+            +---+---+---+---+
+/// | Q | W | E | R |            | 4 | 5 | 6 | D |
+/// +---+---+---+---+    ==>     +---+---+---+---+
+/// | A | S | D | F |            | 7 | 8 | 9 | E |
+/// +---+---+---+---+            +---+---+---+---+
+/// | Z | X | C | V |            | A | 0 | B | F |
+/// +---+---+---+---+            +---+---+---+---+
+/// ```
+///
+/// # Arguments
+/// * `key` - SDL2 `Keycode` received from the event loop.
+///
+/// # Returns
+/// An `Option<usize>` containing the keypad value (`0x0..=0xF`) if matched.
 fn key2btn(key: Keycode) -> Option<usize> {
     match key {
         Keycode::Num1 => Some(0x1),
