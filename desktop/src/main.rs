@@ -75,7 +75,7 @@ fn main() {
     }
 }
 
-fn draw_screen(emu: &Emu, canvas: &mut Canvas<Window>) {
+fn draw_screen(emu: &Emulator, canvas: &mut Canvas<Window>) {
     // Clear canvas as black
     canvas.set_draw_color(Color::RGB(0, 0, 0));
     canvas.clear();
