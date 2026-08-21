@@ -8,10 +8,13 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  RUSTFLAGS: "-Dwarnings"
 
 jobs:
-  lint-and-test:
+  # ==========================================
+  # JOB 1: LINTING (Fmt & Clippy)
+  # ==========================================
+  lint:
+    name: Lint
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -26,11 +29,69 @@ jobs:
         with:
           components: rustfmt, clippy
 
-      - name: Run rustfmt
+      # SDL2 headers are required even just to run Clippy
+      - name: Install SDL2 dependencies (Linux)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libsdl2-dev
+
+      - name: Check formatting
         run: cargo fmt --all -- --check
 
       - name: Run clippy
         run: cargo clippy -- -D warnings
 
+  # ==========================================
+  # JOB 2: BUILD & TEST (Linux & Windows)
+  # ==========================================
+  build-and-test:
+    name: Build & Test (${{ matrix.os }})
+    needs: lint # Waits for the lint job to pass before building
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false # If one OS fails, let the other continue
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+
+    defaults:
+      run:
+        working-directory: ./desktop
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      # Install SDL2 natively for the Ubuntu runner
+      - name: Install SDL2 dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libsdl2-dev
+
       - name: Run tests
         run: cargo test
+
+      - name: Build release binary
+        run: cargo build --release
+
+      # Upload Linux binary
+      - name: Upload Artifact (Linux)
+        if: runner.os == 'Linux'
+        uses: actions/upload-artifact@v4
+        with:
+          name: chip8-linux
+          path: desktop/target/release/desktop
+          retention-days: 7
+
+      # Upload Windows executable
+      - name: Upload Artifact (Windows)
+        if: runner.os == 'Windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: chip8-windows
+          path: desktop/target/release/desktop.exe
+          retention-days: 7
