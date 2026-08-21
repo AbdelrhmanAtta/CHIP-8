@@ -60,10 +60,8 @@ pub struct Emulator {
     sound_timer: u8,
 }
 
-impl Emulator {
-    /// Creates a new emulator with a clean RAM/register state and the
-    /// built-in fontset loaded at the start of memory.
-    pub fn new() -> Self {
+impl Default for Emulator {
+    fn default() -> Self {
         let mut new_emulator = Self {
             pc: START_ADDR,
             ram: [0; RAM_SIZE],
@@ -78,6 +76,19 @@ impl Emulator {
         };
         new_emulator.ram[..FONTSET_SIZE].copy_from_slice(&FONTSET);
         new_emulator
+    }
+}
+
+impl Emulator {
+    /// Creates a new emulator with a clean RAM/register state and the
+    /// built-in fontset loaded at the start of memory.
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Resets the emulator to its initial state, as if freshly created.
+    pub fn reset(&mut self) {
+        *self = Self::default();
     }
 
     /// Fetches and executes a single instruction (one CPU cycle).
@@ -130,7 +141,7 @@ impl Emulator {
         let digit4 = op & 0x000F;
 
         match (digit1, digit2, digit3, digit4) {
-            (0, 0, 0, 0) => return, // nop
+            (0, 0, 0, 0) => (), // nop
             (0, 0, 0xE, 0) => {
                 // clc: clear the screen
                 self.screen = [false; SCREEN_WIDTH * SCREEN_HEIGHT];
@@ -215,8 +226,7 @@ impl Emulator {
                 // Vx += Vy, VF = carry
                 let x = digit2 as usize;
                 let y = digit3 as usize;
-                let (new_vx, carry) =
-                    self.v_registers[x].overflowing_add(self.v_registers[y]);
+                let (new_vx, carry) = self.v_registers[x].overflowing_add(self.v_registers[y]);
                 let new_vf = if carry { 1 } else { 0 };
                 self.v_registers[x] = new_vx;
                 self.v_registers[0xF] = new_vf;
@@ -225,8 +235,7 @@ impl Emulator {
                 // Vx -= Vy, VF = NOT borrow
                 let x = digit2 as usize;
                 let y = digit3 as usize;
-                let (new_vx, borrow) =
-                    self.v_registers[x].overflowing_sub(self.v_registers[y]);
+                let (new_vx, borrow) = self.v_registers[x].overflowing_sub(self.v_registers[y]);
                 let new_vf = if borrow { 0 } else { 1 };
                 self.v_registers[x] = new_vx;
                 self.v_registers[0xF] = new_vf;
@@ -242,8 +251,7 @@ impl Emulator {
                 // Vx = Vy - Vx, VF = NOT borrow
                 let x = digit2 as usize;
                 let y = digit3 as usize;
-                let (new_vx, borrow) =
-                    self.v_registers[y].overflowing_sub(self.v_registers[x]);
+                let (new_vx, borrow) = self.v_registers[y].overflowing_sub(self.v_registers[x]);
                 let new_vf = if borrow { 0 } else { 1 };
                 self.v_registers[x] = new_vx;
                 self.v_registers[0xF] = new_vf;
@@ -288,7 +296,7 @@ impl Emulator {
                 let mut flipped = false;
 
                 for y_line in 0..row_n {
-                    let addr = self.i_register + y_line as u16;
+                    let addr = self.i_register + y_line;
                     let pixels = self.ram[addr as usize];
 
                     for x_line in 0..8 {
@@ -397,21 +405,6 @@ impl Emulator {
             }
             (_, _, _, _) => unimplemented!("Unimplemented op-code: {:04X}", op),
         }
-    }
-
-    /// Resets the emulator to its initial state, as if freshly created.
-    pub fn reset(&mut self) {
-        self.pc = START_ADDR;
-        self.ram = [0; RAM_SIZE];
-        self.screen = [false; SCREEN_WIDTH * SCREEN_HEIGHT];
-        self.v_registers = [0; REGISTERS_NUMBER];
-        self.i_register = 0;
-        self.sp = 0;
-        self.stack = [0; STACK_SIZE];
-        self.keys = [false; KEYS_NUMBER];
-        self.delay_timer = 0;
-        self.sound_timer = 0;
-        self.ram[..FONTSET_SIZE].copy_from_slice(&FONTSET);
     }
 
     pub fn get_display(&self) -> &[bool] {
