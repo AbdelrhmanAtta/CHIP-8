@@ -11,22 +11,26 @@ env:
   RUSTFLAGS: "-Dwarnings"
 
 jobs:
-  lint:
-    name: Code Quality & Linting
+  lint-and-test:
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
+    defaults:
+      run:
+        working-directory: ./desktop
 
-      - name: Install Rust toolchain
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
 
-      - name: Cache dependencies
-        uses: Swatinem/rust-cache@v2
-
-      - name: Check Formatting
+      - name: Run rustfmt
         run: cargo fmt --all -- --check
 
-      - name: Run Clippy
-        run: cargo clippy --all-targets --all-features
+      - name: Run clippy
+        run: cargo clippy -- -D warnings
+
+      - name: Run tests
+        run: cargo test
