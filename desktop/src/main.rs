@@ -39,7 +39,7 @@ fn main() {
 
     let mut event_pump = sdl_context.event_pump().unwrap();
 
-    let mut chip8 = Emu::new();
+    let mut chip8 = Emulator::new();
 
     let mut rom = File::open(&args[1]).expect("Unable to open file");
     let mut buffer = Vec::new();
