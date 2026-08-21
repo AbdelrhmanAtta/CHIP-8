@@ -5,4 +5,11 @@ edition = "2024"
 
 [dependencies]
 chip8_core = { path = "../chip8_core" }
-sdl2 = "0.38"
+rand = "0.8"
+
+[target.'cfg(not(windows))'.dependencies]
+sdl2 = "0.38.0"
+
+[target.'cfg(windows)'.dependencies.sdl2]
+version = "0.38.0"
+features = ["bundled", "static-link"]
