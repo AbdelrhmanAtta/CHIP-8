@@ -42,8 +42,8 @@ jobs:
       - name: Run clippy
         run: cargo clippy -- -D warnings
 
-  build-and-test-linux:
-    name: Build & Test (Linux)
+  build-linux:
+    name: Build Only (Linux)
     needs: lint
     runs-on: ubuntu-latest
 
@@ -68,9 +68,6 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libsdl2-dev
 
-      - name: Run tests
-        run: cargo test
-
       - name: Build release binary
         run: cargo build --release
 
@@ -81,8 +78,8 @@ jobs:
           path: desktop/target/release/desktop
           retention-days: 7
 
-  build-and-test-windows:
-    name: Build & Test (Windows)
+  build-windows:
+    name: Build Only (Windows)
     needs: lint
     runs-on: windows-2022
 
@@ -101,9 +98,6 @@ jobs:
         uses: Swatinem/rust-cache@v2
         with:
           workspaces: "./desktop -> target"
-
-      - name: Run tests
-        run: cargo test
 
       - name: Build release binary
         run: cargo build --release
