@@ -43,7 +43,7 @@ jobs:
         run: cargo clippy -- -D warnings
 
   build-linux:
-    name: Build Only (Linux)
+    name: Build (Linux)
     needs: lint
     runs-on: ubuntu-latest
 
@@ -79,7 +79,7 @@ jobs:
           retention-days: 7
 
   build-windows:
-    name: Build Only (Windows)
+    name: Build (Windows)
     needs: lint
     runs-on: windows-2022
 
