@@ -10,9 +10,6 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  # ==========================================
-  # JOB 1: LINTING (Fmt & Clippy)
-  # ==========================================
   lint:
     name: Lint
     runs-on: ubuntu-latest
@@ -29,7 +26,12 @@ jobs:
         with:
           components: rustfmt, clippy
 
-      - name: Install SDL2 dependencies (Linux)
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: "./desktop -> target"
+
+      - name: Install SDL2 dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y libsdl2-dev
@@ -40,9 +42,6 @@ jobs:
       - name: Run clippy
         run: cargo clippy -- -D warnings
 
-  # ==========================================
-  # JOB 2: BUILD & TEST (Linux)
-  # ==========================================
   build-and-test-linux:
     name: Build & Test (Linux)
     needs: lint
@@ -59,6 +58,11 @@ jobs:
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
 
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: "./desktop -> target"
+
       - name: Install SDL2 dependencies
         run: |
           sudo apt-get update
@@ -70,20 +74,17 @@ jobs:
       - name: Build release binary
         run: cargo build --release
 
-      - name: Upload Artifact (Linux)
+      - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: chip8-linux
           path: desktop/target/release/desktop
           retention-days: 7
 
-  # ==========================================
-  # JOB 3: BUILD & TEST (Windows)
-  # ==========================================
   build-and-test-windows:
     name: Build & Test (Windows)
     needs: lint
-    runs-on: windows-latest
+    runs-on: windows-2022
 
     defaults:
       run:
@@ -96,13 +97,18 @@ jobs:
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
 
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: "./desktop -> target"
+
       - name: Run tests
         run: cargo test
 
       - name: Build release binary
         run: cargo build --release
 
-      - name: Upload Artifact (Windows)
+      - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: chip8-windows
