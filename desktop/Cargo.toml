@@ -3,6 +3,11 @@ name = "desktop"
 version = "0.1.0"
 edition = "2024"
 
-[dependencies]
+[target.'cfg(not(windows))'.dependencies]
 chip8_core = { path = "../chip8_core" }
 sdl2 = "0.38"
+
+[target.'cfg(windows)'.dependencies.sdl2]
+chip8_core = { path = "../chip8_core" }
+version = "0.38.0"
+features = ["bundled", "static-link"]
